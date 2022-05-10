@@ -56,7 +56,7 @@ public class PostTest extends BaseTest {
         .isNotEqualTo(0);
     softAssertions.assertThat(petResponse)
         .as("All data in response should be the same as in request")
-        .isEqualToComparingOnlyGivenFields(petResponse, "id");
+        .isEqualToComparingOnlyGivenFields(pet, "id");
 
     softAssertions.assertAll();
 
