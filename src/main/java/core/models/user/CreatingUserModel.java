@@ -1,4 +1,4 @@
-package core.models;
+package core.models.user;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
@@ -16,9 +16,13 @@ import lombok.Setter;
 @NoArgsConstructor
 @Data
 @JsonInclude(Include.NON_NULL)
-public class NotFoundModel {
+public class CreatingUserModel {
 
-  private Integer code;
-  private String type;
-  private String message;
+  public String username;
+  public String firstName;
+  public String lastName;
+  public String email;
+  public String password;
+  public String phone;
+  public int userStatus;
 }

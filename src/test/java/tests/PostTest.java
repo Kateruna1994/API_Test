@@ -3,9 +3,12 @@ package tests;
 import static core.Endpoints.PET;
 import static core.Endpoints.PET_BY_ID;
 import static core.Endpoints.PET_BY_STATUS;
+import static core.Statuses.AVAILABLE;
+import static core.Statuses.SOLD;
 
 import com.github.javafaker.Faker;
 import core.models.DeletePetModel;
+import core.models.FindByStatusPetModel;
 import core.models.NotFoundModel;
 import core.models.PetModel;
 import core.models.PetModel.Category;
@@ -14,6 +17,9 @@ import core.models.UpdatePetModel;
 import io.restassured.RestAssured;
 import io.restassured.response.ValidatableResponse;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import org.assertj.core.api.Assertions;
 import org.assertj.core.api.SoftAssertions;
 import org.testng.annotations.Test;
 
@@ -21,6 +27,7 @@ public class PostTest extends BaseTest {
 
   static String petName = "Rex";
   static String petId;
+  static String setPetName = "Sky";
 
   @Test
   public void checkStatusCodeAndIdPetTest() {
@@ -38,7 +45,7 @@ public class PostTest extends BaseTest {
         .category(new Category(10, "Dog"))
         .tags(tagList)
         .photoUrls(listUrl)
-        .status("available")
+        .status(AVAILABLE.getStatus())
         .build();
 
     PetModel petResponse = RestAssured.given()
@@ -52,11 +59,11 @@ public class PostTest extends BaseTest {
     SoftAssertions softAssertions = new SoftAssertions();
 
     softAssertions.assertThat(petId)
-        .as("After creation pet " + petId + " should be not 0" )
+        .as("After creation pet " + petId + " should be not 0")
         .isNotEqualTo(0);
     softAssertions.assertThat(petResponse)
         .as("All data in response should be the same as in request")
-        .isEqualToComparingOnlyGivenFields(pet, "id");
+        .isEqualToIgnoringGivenFields(pet, "id");
 
     softAssertions.assertAll();
 
@@ -76,7 +83,7 @@ public class PostTest extends BaseTest {
     SoftAssertions softAssertions = new SoftAssertions();
 
     softAssertions.assertThat(actualPetModel.getName())
-        .as("Name pet should be: Rex")
+        .as("Name pet should be: " + petName)
         .isEqualTo(petName);
 
     softAssertions.assertThat(actualPetModel.getStatus())
@@ -93,7 +100,7 @@ public class PostTest extends BaseTest {
         .contentType("application/x-www-form-urlencoded")
         .pathParam("id", petId)
         .formParam("name", "Sky")
-        .formParam("status", "sold")
+        .formParam("status", SOLD.getStatus())
         .when()
         .post(PET_BY_ID)
         .then()
@@ -114,10 +121,10 @@ public class PostTest extends BaseTest {
         .then()
         .statusCode(200).extract().as(PetModel.class);
 
-    softAssertions.assertThat(pet.getName()).as("New name of dog should be: 'Sky'")
-        .isEqualTo("Sky");
-    softAssertions.assertThat(pet.getStatus()).as("New status should be: 'sold'")
-        .isEqualTo("sold");
+    softAssertions.assertThat(pet.getName()).as("New name of dog should be: " + setPetName)
+        .isEqualTo(setPetName);
+    softAssertions.assertThat(pet.getStatus()).as("New status should be: " + SOLD.getStatus())
+        .isEqualTo(SOLD.getStatus());
     softAssertions.assertAll();
   }
 
@@ -149,8 +156,8 @@ public class PostTest extends BaseTest {
         .as(NotFoundModel.class);
 
     softAssertions.assertThat(actualCreatePetModelAfterDelete.getCode())
-            .as("Code should be 1")
-                .isEqualTo(1);
+        .as("Code should be 1")
+        .isEqualTo(1);
 
     softAssertions.assertThat(actualCreatePetModelAfterDelete.getType())
         .as("Type should be error")
@@ -161,7 +168,52 @@ public class PostTest extends BaseTest {
         .isEqualTo("Pet not found");
 
     softAssertions.assertAll();
-
   }
 
+  @Test
+  public void createNewDog() {
+
+    Faker faker = new Faker();
+
+    ArrayList<Tag> tagList = new ArrayList<>();
+    tagList.add(new Tag(faker.number().numberBetween(5, 50), faker.dog().breed()));
+    tagList.add(new Tag(faker.number().numberBetween(5, 50), faker.dog().breed()));
+    tagList.add(new Tag(faker.number().numberBetween(5, 50), faker.dog().breed()));
+    ArrayList<String> listUrl = new ArrayList<>();
+    listUrl.add("https://unsplash.com/photos/v3-zcCWMjgM");
+    listUrl.add("https://unsplash.com/photos/T-0EW-SEbsE");
+    listUrl.add("https://unsplash.com/photos/BJaqPaH6AGQ");
+    String petName = faker.dog().name();
+
+    PetModel expectPetModel = PetModel.builder()
+        .name(petName)
+        .category(new Category(18, "Dog"))
+        .tags(tagList)
+        .photoUrls(listUrl)
+        .status(SOLD.getStatus())
+        .build();
+
+    ValidatableResponse createPetResponse = RestAssured.given()
+        .body(expectPetModel)
+        .when()
+        .post(PET)
+        .then()
+        .statusCode(200);
+
+    ValidatableResponse petResponse = RestAssured.given()
+        .queryParam("status", SOLD.getStatus())
+        .when()
+        .get(PET_BY_STATUS)
+        .then()
+        .statusCode(200);
+
+    List<FindByStatusPetModel> findByStatusPetModels = Arrays.asList(petResponse.extract()
+        .as(FindByStatusPetModel[].class));
+    List<String> petsName = FindByStatusPetModel.getPetsName(findByStatusPetModels);
+
+    Assertions.assertThat(petsName)
+        .as("Should be creating dog with name " + petName)
+        .contains(petName);
+
   }
+}
